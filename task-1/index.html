@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+<head>
+  <title>Russian Roulette</title>
+  <style>
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Russian Roulette</h1>
+    <div class="status"></div>
+  </header>
+  <main>
+    <div class="player" id="player1">
+      <h2>Jugador 1</h2>
+      <p>Vidas: <strong id="lives-player1">#</strong></p>
+      <button onclick="shootSelf(1)">Dispararse</button>
+      <button onclick="shootOpponent(1)">Disparar al rival</button>
+    </div>
+
+    <div class="player" id="player2">
+      <h2>Jugador 2</h2>
+      <p>Vidas: <strong id="lives-player2">#</strong></p>
+      <button onclick="shootSelf(2)">Dispararse</button>
+      <button onclick="shootOpponent(2)">Disparar al rival</button>
+    </div>
+
+    <div class="log" id="log"></div>
+  </main>
+
+  <script>
+    class Bullet {
+      constructor(type) {this.type = type;}
+    }
+
+    class Player {
+      constructor(name, lives) {
+        this.name = name;
+        this.lives = lives;
+      }
+      getShot(bullet) {
+        if (bullet.type === "real") this.lives--;
+      }
+      isAlive() {return this.lives > 0;}
+    }
+
+    class Gun {
+      constructor(blank_bullets, real_bullets) {
+        this.blank_bullets = blank_bullets;
+        this.real_bullets = real_bullets;
+      }
+
+      shoot() {
+        if (!this.areThereBullets()) return null;
+        let prob = this.blank_bullets / (this.blank_bullets + this.real_bullets);
+        if (Math.random() > prob) {this.real_bullets--; return new Bullet("real");}
+        else {this.blank_bullets--; return new Bullet("blank");}
+      }
+      areThereBullets() {return this.blank_bullets + this.real_bullets > 0;}
+    }
+
+    class Dealer {
+      constructor(player1, player2, gun) {
+        this.player1 = player1;
+        this.player2 = player2;
+        this.gun = gun;
+        this.turn = this.player1;
+      }
+
+      changeTurn() {
+        if (this.turn === this.player1) {
+          this.turn = this.player2;
+          return;
+        }
+
+        this.turn = this.player1;
+      }
+
+      playerShootsPlayer(target) {
+        let bullet = this.gun.shoot();
+        if (!bullet) return null;
+        let before = target.lives;
+        target.getShot(bullet);
+        this.changeTurn();
+        return {hit: before > target.lives, bulletType: bullet.type};
+      }
+    }
+
+    function refreshPage() {
+      document.getElementById("player1").querySelector("h2").innerText = p1.name;
+      document.getElementById("lives-player1").innerHTML = p1.lives;
+      document.querySelector("#player2 h2").innerText = p2.name;
+      document.getElementById("lives-player2").innerHTML = p2.lives;
+    }
+
+    function logMessage(msg) {
+      document.getElementById("log").innerHTML = msg + "<br>" + document.getElementById("log").innerHTML;
+    }
+
+    function isGameOver() {
+      return !(p1.isAlive() && p2.isAlive() && gun.areThereBullets());
+    }
+
+    function shootSelf(num) {
+      let shooter = num === 1 ? p1 : p2;
+      if (dealer.turn !== shooter) {
+        alert(`aun no es turno de ${shooter.name}`);
+        return;
+      }
+      let result = dealer.playerShootsPlayer(shooter);
+      if (!result) {logMessage("⚠ No hay más balas."); return;}
+      logMessage(`${shooter.name} se disparó y salió bala ${result.bulletType}`);
+      refreshPage();
+      if (isGameOver()) endGame();
+    }
+
+    function shootOpponent(num) {
+      let shooter = num === 1 ? p1 : p2;
+      if (dealer.turn !== shooter) {
+        alert(`aun no es turno de ${shooter.name}`);
+        return;
+      }
+      let target = num === 1 ? p2 : p1;
+      let result = dealer.playerShootsPlayer(target);
+      if (!result) {logMessage("⚠ No hay más balas."); return;}
+      logMessage(`${shooter.name} disparó a ${target.name} y salió bala ${result.bulletType}`);
+      refreshPage();
+      if (isGameOver()) endGame();
+    }
+
+    function endGame() {
+      let winner = p1.lives > p2.lives ? p1.name : p2.lives > p1.lives ? p2.name : "Empate";
+      logMessage(`🏆 Fin del juego. Ganador: ${winner}`);
+      document.querySelectorAll("button").forEach(btn => btn.disabled = true);
+    }
+
+    function generateGun() {
+      const realBullets = Math.floor(Math.random() * (maxBullets + 1));
+      const blankBullets = maxBullets - realBullets;
+      logMessage(`Se crearon ${blankBullets} balas de salva y ${realBullets} balas reales`)
+      return new Gun(blankBullets, realBullets);
+    }
+
+    const initial_lives = parseInt(prompt("Vidas iniciales:"));
+    let p1_name = prompt("Nombre del jugador 1");
+    let p2_name = prompt("Nombre del jugador 2");
+
+    const p1 = new Player(p1_name, initial_lives);
+    const p2 = new Player(p2_name, initial_lives);
+
+    const maxBullets = parseInt(prompt("Ingrese el número máximo de balas"));
+
+    const gun = generateGun();
+    const dealer = new Dealer(p1, p2, gun);
+
+    refreshPage();
+  </script>
+</body>
+
+</html>
